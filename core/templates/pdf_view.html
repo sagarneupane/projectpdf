@@ -1,0 +1,72 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PDF View</title>
+    <script src="{% static 'pdfjs/pdf.js' %}"></script>
+    <style>
+        /* Adjust the styles as needed */
+        #pdf-container {
+            border: 2px solid rgb(0, 0, 0);
+            padding: 2px;
+            border-style: inset;
+            background-color: black;
+            
+        }
+    </style>
+</head>
+<body>
+    <a href="{{ pdf_file.file.url }}">Download PDF</a>
+    
+    <div id="pdf-container">
+        <canvas id="pdf-canvas"></canvas>
+    </div>
+
+    <script>
+        // PDF.js options
+        const pdfUrl = "{{ pdf_file.file.url }}";
+        const container = document.getElementById('pdf-container');
+        const canvas = document.getElementById('pdf-canvas');
+
+        // Wait for PDF.js to load
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "{% static 'pdfjs/pdf.worker.js' %}";
+
+        // Load the PDF file
+        pdfjsLib.getDocument(pdfUrl).promise.then(pdf => {
+            // Fetch the first page
+            pdf.getPage(1).then(page => {
+                const scale = 1.5;
+                const viewport = page.getViewport({ scale });
+
+                // Set the canvas dimensions based on the PDF page
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+
+                const renderContext = {
+                    canvasContext: canvas.getContext('2d'),
+                    viewport: viewport
+                };
+
+                // Render the PDF page on the canvas
+                page.render(renderContext).promise.then(() => {
+                    // Add horizontal and vertical scrollbars to the container
+                    container.style.overflow = 'auto';
+
+                    // Enable download button
+                    const downloadButton = document.createElement('a');
+                    downloadButton.href = "{{ pdf_file.file.url }}";
+                    downloadButton.download = "document.pdf";
+                    downloadButton.textContent = "Download PDF";
+                    document.body.insertBefore(downloadButton, container);
+
+                    // Add event listener for scroll sync
+                    container.addEventListener('scroll', function() {
+                        const { scrollLeft, scrollTop } = this;
+                        canvas.style.transform = `translate(${-scrollLeft}px, ${-scrollTop}px)`;
+                    });
+                });
+            });
+        });
+    </script>
+</body>
+</html>
